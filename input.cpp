@@ -2,13 +2,15 @@
 #include <fstream>
 #include <cstdio>
 #include "solver.h"
+#include <stdlib.h>
 
 std::vector<std::string> parse(std::string line, std::string delim)
 {
 	std::vector<std::string> parsed;
 	std::string str;
-	while(str != line){
-		str = line.substr(0,line.find(delim));
+	while (str != line)
+	{
+		str = line.substr(0, line.find(delim));
 		line = line.substr(line.find(delim) + 1);
 		parsed.push_back(str);
 	}
@@ -17,50 +19,51 @@ std::vector<std::string> parse(std::string line, std::string delim)
 
 void Solver::load(std::string filename)
 {
-	std::string file1=filename+"_batch.csv";
+	std::string file1 = filename + "_batch.csv";
 	std::ifstream ifs1(file1);
-  std::string line;
-	std::string delim=";";
-	
-	std::getline ( ifs1, line ); 
-  //std::cout << line << std::endl; 
+	std::string line;
+	std::string delim = ";";
 
-  for(;std::getline(ifs1,line);!ifs1.eof())
-  {
-		std::vector<std::string> parsed=parse(line,delim);
+	std::getline(ifs1, line);
+	//std::cout << line << std::endl;
+
+	for (; std::getline(ifs1, line); !ifs1.eof())
+	{
+		std::vector<std::string> parsed = parse(line, delim);
 		Item new_item;
-		new_item.id=std::stoi(parsed[0]);
-		new_item.size.x=std::stoi(parsed[1]);
-		new_item.size.y=std::stoi(parsed[2]);
-		new_item.stack=std::stoi(parsed[3]);
-		new_item.seq=std::stoi(parsed[4]);
+		new_item.id = std::atoi(parsed[0].c_str());
+		new_item.size.x = std::atoi(parsed[1].c_str());
+		new_item.size.y = std::atoi(parsed[2].c_str());
+		new_item.stack = std::atoi(parsed[3].c_str());
+		new_item.seq = std::atoi(parsed[4].c_str());
 		items.push_back(new_item);
-  }
-	
-	std::string file2=filename+"_defects.csv";
+	}
+
+	std::string file2 = filename + "_defects.csv";
 	std::ifstream ifs2(file2);
 
-	std::getline ( ifs2, line ); 
-  //std::cout << line << std::endl; 
+	std::getline(ifs2, line);
+	//std::cout << line << std::endl;
 
-  for(;std::getline(ifs2,line);!ifs2.eof())
-  {
-		std::vector<std::string> parsed=parse(line,delim);
-		int bin_num=std::stoi(parsed[1]);
-		int def_num=std::stoi(parsed[0]);
-		Coord pos; Coord size;
-		pos.x=std::stoi(parsed[2]);
-		pos.y=std::stoi(parsed[3]);
-		size.x=std::stoi(parsed[4]);
-		size.y=std::stoi(parsed[5]);
-		if(bins.size()<=bin_num)
+	for (; std::getline(ifs2, line); !ifs2.eof())
+	{
+		std::vector<std::string> parsed = parse(line, delim);
+		int bin_num = std::atoi(parsed[1].c_str());
+		int def_num = std::atoi(parsed[0].c_str());
+		Coord pos;
+		Coord size;
+		pos.x = std::atoi(parsed[2].c_str());
+		pos.y = std::atoi(parsed[3].c_str());
+		size.x = std::atoi(parsed[4].c_str());
+		size.y = std::atoi(parsed[5].c_str());
+		if (bins.size() <= bin_num)
 		{
-			bins.resize(bin_num+1);
+			bins.resize(bin_num + 1);
 		}
 		Bin::Defect new_def;
-		new_def.id=def_num;
-		new_def.pos=pos;
-		new_def.size=size;
+		new_def.id = def_num;
+		new_def.pos = pos;
+		new_def.size = size;
 		bins[bin_num].defects.push_back(new_def);
 	}
 }
