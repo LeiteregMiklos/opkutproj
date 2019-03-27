@@ -2,7 +2,8 @@
 #include <fstream>
 #include <cstdio>
 #include "solver.h"
-#include <stdlib.h>
+#include <cstdlib>
+#include <algorithm>
 
 std::vector<std::string> parse(std::string line, std::string delim)
 {
@@ -15,12 +16,12 @@ std::vector<std::string> parse(std::string line, std::string delim)
 		parsed.push_back(str);
 	}
 	return parsed;
-}
+};
 
 void Solver::load(std::string filename)
 {
 	std::string file1 = filename + "_batch.csv";
-	std::ifstream ifs1(file1);
+	std::fstream ifs1(file1.c_str());
 	std::string line;
 	std::string delim = ";";
 
@@ -40,7 +41,7 @@ void Solver::load(std::string filename)
 	}
 
 	std::string file2 = filename + "_defects.csv";
-	std::ifstream ifs2(file2);
+	std::ifstream ifs2(file2.c_str());
 
 	std::getline(ifs2, line);
 	//std::cout << line << std::endl;
@@ -60,10 +61,26 @@ void Solver::load(std::string filename)
 		{
 			bins.resize(bin_num + 1);
 		}
-		Bin::Defect new_def;
+		Solver::Defect new_def;
 		new_def.id = def_num;
 		new_def.pos = pos;
 		new_def.size = size;
 		bins[bin_num].defects.push_back(new_def);
+	}
+}
+
+void Solver::init()
+{
+	for (auto i : items)
+	{
+		if (i.stack >= stacks.size())
+		{
+			stacks.resize(i.stack+1);
+		}
+		stacks[i.stack].push_back(i);
+	}
+	for (int i = 0; i < stacks.size(); i++)
+	{
+		std::sort(stacks[i].begin(), stacks[i].end(), [](Item a, Item b) {return a.seq < b.seq;}  );
 	}
 }
