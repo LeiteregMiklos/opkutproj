@@ -42,6 +42,7 @@ public:
 	std::vector<Bin> bins;
 
 	//typedef typename std::list<Item> sequence
+	//stacks[2]=2. stacken az itemek
 	std::vector<std::vector<Item>> stacks;
 
 	Solver()
@@ -55,6 +56,7 @@ public:
 
 	void init();
 };
+
 
 class RekSolver : Solver
 {
@@ -91,7 +93,7 @@ public:
 	//typedef typename std::list<sol> LoS;
 	std::list<sol> rek(subproblem sub);
 	std::list<int> consideredCuts(subproblem sub);
-	std::pair<rectangle, rectangle> cutUp(subproblem sub, int cut);
+	std::pair<rectangle, rectangle> cutUp(subproblem sub, int cut, bool vertical, bool& success);
 	std::list<sol> fit(subproblem sub); //solves the special case where no more cuts are allowed 
 	//i.e. checking it sub.rect matches any upcomming rectangles
 };
