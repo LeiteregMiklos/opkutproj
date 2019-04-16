@@ -1,1 +1,1 @@
-g++ main.cpp input.cpp first.cpp -fmax-errors=3 -o glass 
+g++ main.cpp input.cpp first.cpp -fmax-errors=3 -Wall -o glass 
