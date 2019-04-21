@@ -57,7 +57,7 @@ void Solver::load(std::string filename)
 		pos.y = std::atoi(parsed[3].c_str());
 		size.x = std::atoi(parsed[4].c_str());
 		size.y = std::atoi(parsed[5].c_str());
-		if (bins.size() <= bin_num)
+		if ((int)bins.size() <= bin_num)
 		{
 			bins.resize(bin_num + 1);
 		}
@@ -73,13 +73,13 @@ void Solver::init()
 {
 	for (auto i : items)
 	{
-		if (i.stack >= stacks.size())
+		if (i.stack >= (int)stacks.size())
 		{
 			stacks.resize(i.stack+1);
 		}
 		stacks[i.stack].push_back(i);
 	}
-	for (int i = 0; i < stacks.size(); i++)
+	for (int i = 0; i < (int)stacks.size(); i++)
 	{
 		std::sort(stacks[i].begin(), stacks[i].end(), [](Item a, Item b) {return a.seq < b.seq;}  );
 	}

@@ -2,77 +2,82 @@
 #include "solver.h"
 #include <algorithm>
 #include <list>
-#include <functional>
 
 std::vector<RekSolver::sol> RekSolver::rek(subproblem sub)
 {
 	std::vector<sol> l_ret;
-	if(sub.depth>3){return l_ret;}
-	l_ret = fit(sub);
-	bool vertical;
-	if (sub.depth % 2 == 0)
+	if(finished(sub.ss)){l_ret.push_back(sol(sub,sub.ss)); return l_ret;} 
+	if (sub.begin == -1)
 	{
-		vertical = true;
-	}
-	else
-	{
-		vertical = false;
-	}
-	std::list<int> cc = consideredCuts(sub,vertical);
-	for (int c : cc)
-	{
-		
-		bool success;
-		std::pair<rectangle, rectangle> r1r2 = cutUp(sub, c, vertical, success);
-		if (success)
+		if (sub.depth > 3)
 		{
-			subproblem sub1;
-			sub1.rect = r1r2.first;
-			sub1.depth = sub.depth + 1;
-			sub1.ss = sub.ss;
-			sub1.first = true;
-			std::vector<sol> l1 = rek(sub1);
-			for (sol s : l1)
+			return l_ret;
+		}
+		l_ret = fit(sub);
+		bool vertical;
+		if (sub.depth % 2 == 0)
+		{
+			vertical = true;
+		}
+		else
+		{
+			vertical = false;
+		}
+		std::list<int> cc = consideredCuts(sub, vertical);
+		for (int c : cc)
+		{
+
+			bool success;
+			std::pair<rectangle, rectangle> r1r2 = cutUp(sub, c, vertical, success);
+			if (success)
 			{
-				subproblem sub2;
-				sub2.rect = r1r2.second;
-				sub2.depth = sub.depth + 1;
-				sub2.ss = s.to;
-				sub2.first = false;
-				std::vector<sol> l2 = rek(sub2);
-				for (sol s2 : l2)
+				subproblem sub1(r1r2.first,sub.ss,sub.depth + 1,-1);
+				std::vector<sol> l1 = rek(sub1);
+				for (sol s1 : l1)
 				{
-					sol s_ret;
-					s_ret.s = sub;
-					s_ret.from = sub.ss;
-					s_ret.to = s2.to;
-					l_ret.push_back(s_ret);
-				}
-				if (!sub.first)
-				{
+					subproblem sub2(r1r2.second,s1.to,sub.depth + 1,-1);
+					std::vector<sol> l2 = rek(sub2);
+					for (sol s2 : l2)
+					{
+						sol s_ret(sub,sub.ss,s2.to,c,s1.b,s2.b); //s1,s2
+						l_ret.push_back(s_ret);
+					}
 					sub2.depth = sub.depth;
 					l2 = rek(sub2);
 					for (sol s2 : l2)
 					{
-						sol s_ret;
-						s_ret.s = sub;
-						s_ret.from = sub.ss;
-						s_ret.to = s2.to;
+						sol s_ret(sub,sub.ss,s2.to,c,s1.b,s2.b);
 						l_ret.push_back(s_ret);
 					}
 				}
 			}
 		}
 	}
+	if (sub.begin >= 0)
+	{
+		rectangle rect_(Coord(0,0),area,this->bins[sub.begin].defects);
+		subproblem sub1(rect_,sub.ss,0,-1);
+		std::vector<sol> l1=rek(sub1);
+		for(sol s1 : l1)
+		{
+			subproblem sub2(s1.to,sub.begin+1);
+			std::vector<sol> l2 = rek(sub2);
+			for(sol s2 : l2)
+			{
+				sol s_ret(sub,sub.ss,s2.to,-2,s1.b,s2.b);
+				l_ret.push_back(s_ret);
+			}
+		}
+	}
+
 	selectTopK(l_ret, 100);
 	return l_ret;
 }
 
 std::pair<RekSolver::rectangle, RekSolver::rectangle> RekSolver::cutUp(subproblem sub, int c, bool vertical, bool &success)
 {
-	rectangle r1;
-	rectangle r2;
-
+	std::vector<Defect> defs1;
+	std::vector<Defect> defs2;
 	for (Defect def : sub.rect.defs)
 	{
 		int first, second;
@@ -91,50 +96,49 @@ std::pair<RekSolver::rectangle, RekSolver::rectangle> RekSolver::cutUp(subproble
 			success = false;
 			return std::pair<rectangle, rectangle>();
 		}
-		if(c>second)
+		if (c > second)
 		{
-			r1.defs.push_back(def);
+			defs1.push_back(def);
 		}
-		if(c<first)
+		if (c < first)
 		{
-			r2.defs.push_back(def);
+			defs2.push_back(def);
 		}
 	}
 	success = true;
-
+	Coord lb1,rt1,lb2,rt2;
 	if (vertical)
-	{		
-		r1.lb = sub.rect.lb;
-		r1.rt.y = sub.rect.rt.y;
-		r1.rt.x = c;
-		
-		r2.lb.y = sub.rect.lb.y;
-		r2.lb.x = c;
-		r2.rt = sub.rect.rt;
-	} else
 	{
-		r1.lb = sub.rect.lb;
-		r1.rt.x = sub.rect.rt.x;
-		r1.rt.y = c;
-		
-		r2.lb.x = sub.rect.lb.x;
-		r2.lb.y = c;
-		r2.rt = sub.rect.rt;
-	}	
-	return std::make_pair(r1,r2);
+		lb1 = sub.rect.lb;
+		rt1 = Coord(c,sub.rect.rt.y);
+
+		lb2 = Coord(c,sub.rect.lb.y);
+		rt2 = sub.rect.rt;
+	}
+	else
+	{
+		lb1 = sub.rect.lb;
+		rt1 = Coord(sub.rect.rt.x,c);
+
+		lb2 = Coord(sub.rect.lb.x,c);
+		rt2 = sub.rect.rt;
+	}
+	rectangle r1(lb1,rt1,defs1);
+	rectangle r2(lb2,rt2,defs2);
+	return std::make_pair(r1, r2);
 }
 
-std::list<int> sums(std::vector<int> inp, int k)//possible sums form inp
+std::list<int> sums(std::vector<int> inp, int k) //possible sums form inp
 {
 	std::list<int> ret;
 	ret.push_back(0);
-	for(int i : inp)
+	for (int i : inp)
 	{
-		for(int s : ret)
+		for (int s : ret)
 		{
 			std::list<int> ret_;
-			int ss=s+i;
-			if(ss<k)
+			int ss = s + i;
+			if (ss < k)
 			{
 				ret_.push_back(ss);
 			}
@@ -151,44 +155,33 @@ std::list<int> sums(std::vector<int> inp, int k)//possible sums form inp
 //subproblem.depth alapján tudjuk hogy függőleges vagy vizszintes vágás jön. --- depth%2
 std::list<int> RekSolver::consideredCuts(subproblem sub, bool vertical) //returns the list of cuts
 {
-	int nn=5; //number of objects considered on in stack
+	int nn = 5; //number of objects considered on in stack
 	std::vector<int> lens;
-	for(auto items : this->stacks)
+	for (auto items : this->stacks)
 	{
-		for(int i=0;i<nn;i++)
+		for (int i = 0; i < nn; i++)
 		{
 			lens.push_back(items[i].size.x);
 			lens.push_back(items[i].size.y);
 		}
 	}
 	int k;
-	if(vertical){k=sub.rect.rt.x-sub.rect.lb.x;} else {k=sub.rect.rt.y-sub.rect.lb.y;}
-	return sums(lens,k);
-}
-
-bool comp(RekSolver::sol& lhs, RekSolver::sol& rhs,std::vector<std::vector<Solver::Item>>& stacks)
-{
-	int ar1=0;
-	int ar2=0;
-	for(int s=0;s<(int)stacks.size();s++)
+	if (vertical)
 	{
-		for(int i=lhs.from[s];i<=lhs.to[s];i++)
-		{
-			ar1+=stacks[s][i].size.area();
-		}
-		for(int i=rhs.from[s];i<=rhs.to[s];i++)
-		{
-			ar2+=stacks[s][i].size.area();
-		}
+		k = sub.rect.rt.x - sub.rect.lb.x;
 	}
-	return ((float)ar1/(lhs.s.rect.rt-lhs.s.rect.lb).area())>((float)ar2/(rhs.s.rect.rt-rhs.s.rect.lb).area());
+	else
+	{
+		k = sub.rect.rt.y - sub.rect.lb.y;
+	}
+	return sums(lens, k);
 }
 
-/* class compare
+class comparator
 {
 public:
 	std::vector<std::vector<Solver::Item>>* stacks;
-	compare(std::vector<std::vector<Solver::Item>>* stacks)
+	comparator(std::vector<std::vector<Solver::Item>>* stacks)
 	{
 		this->stacks=stacks;
 	}
@@ -200,42 +193,52 @@ public:
 		{
 			for(int i=lhs.from[s];i<=lhs.to[s];i++)
 			{
-				ar1+=*stacks[s][i].size.area();
+				ar1+=((*stacks)[s][i]).size.area();
 			}
 			for(int i=rhs.from[s];i<=rhs.to[s];i++)
 			{
-				ar2+=*stacks[s][i].size.area();
+				ar2+=((*stacks)[s][i]).size.area();
 			}
 		}
 		return ((float)ar1/(lhs.s.rect.rt-lhs.s.rect.lb).area())>((float)ar2/(rhs.s.rect.rt-rhs.s.rect.lb).area());
 	}
 	private:
-}; */
-
+};
 
 void RekSolver::selectTopK(std::vector<RekSolver::sol> &v, int k) //returns the best k solutions from l;
 {
-	std::sort(v.begin(),v.end(),std::bind(comp,std::placeholders::_1,std::placeholders::_2,this->stacks));
-	v.resize(k);
+	//std::sort(v.begin(), v.end(), std::bind(comp, std::placeholders::_1, std::placeholders::_2, this->stacks));
+	std::sort(v.begin(), v.end(), comparator(&(this->stacks)) );
+	v.erase(v.begin()+k,v.end());
+}
+
+bool RekSolver::finished(std::vector<int>& ss)
+{
+	for(int s=0;s<(int)stacks.size();s++)
+	{
+		if((int)stacks[s].size()>ss[s]){return false;}
+	}
+	return true;
 }
 
 //felismerni hogy a sub.problem.rect az pont az egyik stacken a következő item
 //hibákat figyelembe véve
 std::vector<RekSolver::sol> RekSolver::fit(subproblem sub)
-{	
+{
 	std::vector<sol> ret;
-	if(sub.rect.defs.size()!=0){return ret;}
-	sol temp;
-	temp.s=sub;
-	temp.from=sub.ss;
-	temp.to=sub.ss;
-	for(int s=0;s<(int)this->stacks.size();s++){temp.to[s]--;}
-	for(int s=0;s<(int)this->stacks.size();s++)
+	ret.push_back(sol(sub,sub.ss));
+	if(sub.rect.defs.size() != 0)
 	{
-		if(this->stacks[s][sub.ss[s]].size.fit(sub.rect.rt-sub.rect.lb))
+		return ret;
+	}
+	sol temp(sub,sub.ss);
+	for (int s = 0; s < (int)this->stacks.size(); s++)
+	{
+		if( ((this->stacks)[s][sub.ss[s]]).size.fits(sub.rect.rt - sub.rect.lb))
 		{
-			sol _t=temp;
+			sol _t(temp);
 			_t.to[s]++;
+			_t.b->itemid=((this->stacks)[s][sub.ss[s]]).id;
 			ret.push_back(_t);
 		}
 	}
