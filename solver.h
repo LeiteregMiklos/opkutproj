@@ -11,13 +11,17 @@ struct Coord
 	Coord() = default;
 	Coord(const Coord& c) = default;
 	Coord(int x, int y): x(x), y(y) {}
-	Coord operator-(Coord& rhs)
+	Coord operator-(const Coord& rhs) const
 	{
 		return Coord(this->x-rhs.x,this->y-rhs.y);
 	}
 	bool fits(const Coord& other)
 	{
 		return (this->x==other.x && this->y==other.y) || (this->x==other.y && this->y==other.x);
+	}
+	void print() const
+	{
+		std::cout<<"x:"<<x<<"y:"<<y;
 	}
 };
 
@@ -70,7 +74,7 @@ public:
 };
 
 
-class RekSolver : Solver
+class RekSolver : public Solver
 {
 public:
 	struct rectangle
@@ -82,20 +86,13 @@ public:
 		rectangle()=default;
 	};
 
-/* 	struct stackstate
-	{
-		std::vector<int> state;
-		std::vector<std::vector<Item>>* p;
-	}; */
-
 	struct subproblem //subproblem
 	{
 		rectangle rect;
-		std::vector<int> ss;
+		std::vector<int> ss; //stack state
 		int depth; //depth of the next cut
 		int begin; //-1 if the subproblem is a rectangle; begin=k means the subproblem corresponds to all the bins from the k-th one on
 		subproblem(const subproblem& sub) = default;
-		subproblem(int begin): begin(begin) {}
 		subproblem(const std::vector<int>& ss, int begin): ss(ss), begin(begin) {}
 		subproblem(const rectangle& rect,const std::vector<int>& ss, int depth, int begin): rect(rect), ss(ss), depth(depth), begin(begin) {}
 	};
@@ -157,34 +154,24 @@ public:
 		}
 		sol(subproblem sub, std::vector<int> from,std::vector<int> to,int c,std::shared_ptr<bintree> p1,std::shared_ptr<bintree> p2):
 		s(sub),from(from),to(to), b(new bintree(p1,p2,c)) {}
-		/* sol~()
-		{
-			del(b->p1);
-			del(b->p2);
-			delete b;
-			void del(bintree* p)
-			{
-				if(p!=NULL)
-				{
-					del(p->p1);
-					del(p->p2);
-					delete p;
-				}
-			}
-		} */
 	};
 
 	
 
-	std::vector<sol> rek(subproblem sub);
-	std::list<int> consideredCuts(subproblem sub,bool vertical);
-	std::pair<rectangle, rectangle> cutUp(subproblem sub, int cut, bool vertical, bool& success);
-	std::vector<sol> fit(subproblem sub); //solves the special case where no more cuts are allowed 
+	std::vector<sol> rek(const subproblem& sub);
+	std::list<int> consideredCuts(const subproblem& sub,bool vertical);
+	//cuts up the ractangle into two
+	std::pair<rectangle, rectangle> cutUp(const subproblem& sub, int cut, bool vertical, bool& success);
+	std::vector<sol> fit(const subproblem& sub); //solves the special case where no more cuts are allowed 
+	//i.e. checking if sub.rect matches any upcomming rectangles
 	void solve()
 	{
-		rek(subproblem(0));
+		std::vector<int> ss(stacks.size(),0);
+		std::vector<sol> ret=rek(subproblem(ss,0));
+		ret[0].b->print();
 	}
-	//i.e. checking it sub.rect matches any upcomming rectangles
+	//removes but the top k solutions
 	void selectTopK(std::vector<RekSolver::sol>& l, int k);
-	bool finished(std::vector<int>& ss);
+	//checks if a solution is reached
+	bool finished(const std::vector<int>& ss);
 };

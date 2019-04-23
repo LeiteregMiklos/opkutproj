@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <list>
 
-std::vector<RekSolver::sol> RekSolver::rek(subproblem sub)
+std::vector<RekSolver::sol> RekSolver::rek(const subproblem& sub)
 {
 	std::vector<sol> l_ret;
 	if(finished(sub.ss)){l_ret.push_back(sol(sub,sub.ss)); return l_ret;} 
@@ -26,11 +26,11 @@ std::vector<RekSolver::sol> RekSolver::rek(subproblem sub)
 		std::list<int> cc = consideredCuts(sub, vertical);
 		for (int c : cc)
 		{
-
 			bool success;
 			std::pair<rectangle, rectangle> r1r2 = cutUp(sub, c, vertical, success);
 			if (success)
 			{
+r1r2.first.lb.print(); r1r2.first.rt.print();
 				subproblem sub1(r1r2.first,sub.ss,sub.depth + 1,-1);
 				std::vector<sol> l1 = rek(sub1);
 				for (sol s1 : l1)
@@ -42,13 +42,13 @@ std::vector<RekSolver::sol> RekSolver::rek(subproblem sub)
 						sol s_ret(sub,sub.ss,s2.to,c,s1.b,s2.b); //s1,s2
 						l_ret.push_back(s_ret);
 					}
-					sub2.depth = sub.depth;
+					/* sub2.depth = sub.depth; //the/top right side of a cut can be followed by a cut at the same level
 					l2 = rek(sub2);
 					for (sol s2 : l2)
 					{
 						sol s_ret(sub,sub.ss,s2.to,c,s1.b,s2.b);
 						l_ret.push_back(s_ret);
-					}
+					} */
 				}
 			}
 		}
@@ -58,7 +58,7 @@ std::vector<RekSolver::sol> RekSolver::rek(subproblem sub)
 		rectangle rect_(Coord(0,0),area,this->bins[sub.begin].defects);
 		subproblem sub1(rect_,sub.ss,0,-1);
 		std::vector<sol> l1=rek(sub1);
-		for(sol s1 : l1)
+		/* for(sol s1 : l1)
 		{
 			subproblem sub2(s1.to,sub.begin+1);
 			std::vector<sol> l2 = rek(sub2);
@@ -67,14 +67,15 @@ std::vector<RekSolver::sol> RekSolver::rek(subproblem sub)
 				sol s_ret(sub,sub.ss,s2.to,-2,s1.b,s2.b);
 				l_ret.push_back(s_ret);
 			}
-		}
+		} */
 	}
 
-	selectTopK(l_ret, 100);
+	selectTopK(l_ret, 10);
+	if(sub.begin == 0){selectTopK(l_ret, 1);}
 	return l_ret;
 }
 
-std::pair<RekSolver::rectangle, RekSolver::rectangle> RekSolver::cutUp(subproblem sub, int c, bool vertical, bool &success)
+std::pair<RekSolver::rectangle, RekSolver::rectangle> RekSolver::cutUp(const subproblem& sub, int c, bool vertical, bool &success)
 {
 	std::vector<Defect> defs1;
 	std::vector<Defect> defs2;
@@ -134,17 +135,18 @@ std::list<int> sums(std::vector<int> inp, int k) //possible sums form inp
 	ret.push_back(0);
 	for (int i : inp)
 	{
+		std::list<int> ret_;
 		for (int s : ret)
 		{
-			std::list<int> ret_;
 			int ss = s + i;
 			if (ss < k)
 			{
 				ret_.push_back(ss);
 			}
-			ret.merge(ret_);
 		}
+		ret.merge(ret_);
 	}
+	ret.pop_front();
 	return ret;
 }
 
@@ -153,9 +155,9 @@ std::list<int> sums(std::vector<int> inp, int k) //possible sums form inp
 //ezek alapján vegyük a következő néhány item hosszait, és az ezekből képezhető számokat
 //sub.rect alapján csak a nem túl nagy ilyen számokra van szükség
 //subproblem.depth alapján tudjuk hogy függőleges vagy vizszintes vágás jön. --- depth%2
-std::list<int> RekSolver::consideredCuts(subproblem sub, bool vertical) //returns the list of cuts
+std::list<int> RekSolver::consideredCuts(const subproblem& sub, bool vertical) //returns the list of cuts
 {
-	int nn = 5; //number of objects considered on in stack
+	int nn = 2; //number of objects considered on in stack
 	std::vector<int> lens;
 	for (auto items : this->stacks)
 	{
@@ -209,11 +211,14 @@ void RekSolver::selectTopK(std::vector<RekSolver::sol> &v, int k) //returns the 
 {
 	//std::sort(v.begin(), v.end(), std::bind(comp, std::placeholders::_1, std::placeholders::_2, this->stacks));
 	std::sort(v.begin(), v.end(), comparator(&(this->stacks)) );
-	v.erase(v.begin()+k,v.end());
+	if((int)v.size()>k){
+		v.erase(v.begin()+k,v.end());
+	}
 }
 
-bool RekSolver::finished(std::vector<int>& ss)
+bool RekSolver::finished(const std::vector<int>& ss)
 {
+//std::cout<<"ss"<<ss.size()<<"stacks"<<stacks.size()<<std::endl;
 	for(int s=0;s<(int)stacks.size();s++)
 	{
 		if((int)stacks[s].size()>ss[s]){return false;}
@@ -223,7 +228,7 @@ bool RekSolver::finished(std::vector<int>& ss)
 
 //felismerni hogy a sub.problem.rect az pont az egyik stacken a következő item
 //hibákat figyelembe véve
-std::vector<RekSolver::sol> RekSolver::fit(subproblem sub)
+std::vector<RekSolver::sol> RekSolver::fit(const subproblem& sub)
 {
 	std::vector<sol> ret;
 	ret.push_back(sol(sub,sub.ss));

@@ -1,0 +1,1 @@
+g++ main.cpp input.cpp first.cpp -g -o deb
