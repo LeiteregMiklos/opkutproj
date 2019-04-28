@@ -3,6 +3,14 @@
 #include <algorithm>
 #include <list>
 
+struct fsub
+{
+	RekSolver::sol sol;
+	RekSolver::rectangle rect; //the rectangle on the other side of the cut
+	int cut;
+	fsub(const RekSolver::sol& sol, const RekSolver::rectangle& rect, int cut): sol(sol),rect(rect), cut(cut) {}
+};
+
 std::vector<RekSolver::sol> RekSolver::rek(const subproblem& sub)
 {
 	std::vector<sol> l_ret;
@@ -24,24 +32,19 @@ std::vector<RekSolver::sol> RekSolver::rek(const subproblem& sub)
 			vertical = false;
 		}
 		std::list<int> cc = consideredCuts(sub, vertical);
+		std::vector<fsub> v;
 		for (int c : cc)
 		{
 			bool success;
 			std::pair<rectangle, rectangle> r1r2 = cutUp(sub, c, vertical, success);
 			if (success)
 			{
-r1r2.first.lb.print(); r1r2.first.rt.print();
 				subproblem sub1(r1r2.first,sub.ss,sub.depth + 1,-1);
 				std::vector<sol> l1 = rek(sub1);
+
 				for (sol s1 : l1)
 				{
-					subproblem sub2(r1r2.second,s1.to,sub.depth + 1,-1);
-					std::vector<sol> l2 = rek(sub2);
-					for (sol s2 : l2)
-					{
-						sol s_ret(sub,sub.ss,s2.to,c,s1.b,s2.b); //s1,s2
-						l_ret.push_back(s_ret);
-					}
+					v.push_back(fsub(s1,r1r2.second,c));
 					/* sub2.depth = sub.depth; //the/top right side of a cut can be followed by a cut at the same level
 					l2 = rek(sub2);
 					for (sol s2 : l2)
@@ -50,6 +53,17 @@ r1r2.first.lb.print(); r1r2.first.rt.print();
 						l_ret.push_back(s_ret);
 					} */
 				}
+			}
+		}
+		removeRedundants(v);
+		for(fsub s1 : v)
+		{
+			subproblem sub2(s1.rect,s1.sol.to,sub.depth + 1,-1);
+			std::vector<sol> l2 = rek(sub2);
+			for(sol s2 : l2)
+			{
+				sol s_ret(sub,sub.ss,s2.to,s1.cut,s1.sol.b,s2.b);
+				l_ret.push_back(s_ret);
 			}
 		}
 	}
@@ -71,8 +85,23 @@ r1r2.first.lb.print(); r1r2.first.rt.print();
 	}
 
 	selectTopK(l_ret, 10);
+	removeRedundands(l_ret);
 	if(sub.begin == 0){selectTopK(l_ret, 1);}
 	return l_ret;
+}
+
+//from v remove all solutions witch are packing 0 items in a rect with no defects
+//remove solutions wich are strictly worse than others
+//always leave at least one solution because it might be inpossible to pack anything in an area
+void removeRedundants(std::vector<fsub>& v)
+{
+	//
+}
+
+//same as above
+void removeRedundants(std::vector<RekSolver::sol>& v)
+{
+	//
 }
 
 std::pair<RekSolver::rectangle, RekSolver::rectangle> RekSolver::cutUp(const subproblem& sub, int c, bool vertical, bool &success)
@@ -155,6 +184,8 @@ std::list<int> sums(std::vector<int> inp, int k) //possible sums form inp
 //ezek alapján vegyük a következő néhány item hosszait, és az ezekből képezhető számokat
 //sub.rect alapján csak a nem túl nagy ilyen számokra van szükség
 //subproblem.depth alapján tudjuk hogy függőleges vagy vizszintes vágás jön. --- depth%2
+
+//TODO: átgondolni, hogy egy adott téglalap, adott stackstate adott mélység esetében milyen vágásoknak van egyáltalán értelme
 std::list<int> RekSolver::consideredCuts(const subproblem& sub, bool vertical) //returns the list of cuts
 {
 	int nn = 2; //number of objects considered on in stack
