@@ -55,7 +55,8 @@ std::vector<RekSolver::sol> RekSolver::rek(const subproblem& sub)
 				}
 			}
 		}
-		removeRedundants(v);
+		selectTopK(v,10);
+		trim(v,10);
 		for(fsub s1 : v)
 		{
 			subproblem sub2(s1.rect,s1.sol.to,sub.depth + 1,-1);
@@ -85,7 +86,7 @@ std::vector<RekSolver::sol> RekSolver::rek(const subproblem& sub)
 	}
 
 	selectTopK(l_ret, 10);
-	removeRedundands(l_ret);
+	trim(l_ret);
 	if(sub.begin == 0){selectTopK(l_ret, 1);}
 	return l_ret;
 }
@@ -95,7 +96,7 @@ std::vector<RekSolver::sol> RekSolver::rek(const subproblem& sub)
 //always leave at least one solution because it might be inpossible to pack anything in an area
 void removeRedundants(std::vector<fsub>& v)
 {
-	//
+	//convert std::vector<fsub> to std::vector<Reksolver::sol> call removeRed...
 }
 
 //same as above
@@ -103,6 +104,8 @@ void removeRedundants(std::vector<RekSolver::sol>& v)
 {
 	//
 }
+
+
 
 std::pair<RekSolver::rectangle, RekSolver::rectangle> RekSolver::cutUp(const subproblem& sub, int c, bool vertical, bool &success)
 {
@@ -237,6 +240,8 @@ public:
 	}
 	private:
 };
+
+void RekSolver::selectTopK(std::vector<fsub> &v, int k)
 
 void RekSolver::selectTopK(std::vector<RekSolver::sol> &v, int k) //returns the best k solutions from l;
 {
