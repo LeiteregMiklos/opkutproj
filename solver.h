@@ -59,7 +59,7 @@ public:
 	std::vector<Bin> bins;
 
 	//typedef typename std::list<Item> sequence
-	//stacks[2]=2. stacken az itemek
+	//stacks[1]=2. stacken az itemek
 	std::vector<std::vector<Item>> stacks;
 
 	Solver()
@@ -72,7 +72,6 @@ public:
 
 	void init();
 };
-
 
 class RekSolver : public Solver
 {
@@ -103,7 +102,7 @@ public:
 		std::shared_ptr<bintree> p2; //sides of the cut
 		int cut; //-1 -- no cut -- -2 p1 and p2 are different bins
 		int itemid; //-1 -- no item
-		bintree():p1(NULL), p2(NULL),cut(-1),itemid(-1) {}
+		bintree():p1(nullptr), p2(nullptr),cut(-1),itemid(-1) {}
 		bintree(std::shared_ptr<bintree> p1,std::shared_ptr<bintree> p2,int c): p1(p1), p2(p2), cut(c), itemid(-1) {}
 
 		void print()
@@ -114,7 +113,7 @@ public:
 			std::cout<<"bin "<<c<<std::endl;
 			pr(p1_);
 			c++;
-			while(p2_!=NULL)
+			while(p2_!=nullptr)
 			{
 				p1_=p2_->p1;
 				p2_=p2_->p2;
@@ -125,23 +124,29 @@ public:
 		}
 		static void pr(std::shared_ptr<bintree> p)
 		{
-			if(p!=NULL)
+			if(p!=nullptr)
 			{
 				if(p->cut!=-1)
 				{
 					std::cout<<"cut "<<p->cut<<std::endl;
-				}
-				if(p->itemid!=-1)
+				} else 
 				{
 					std::cout<<"itemid: "<<p->itemid<<std::endl;
 				}
+				/* if(p->itemid!=-1)
+				{
+					
+				} */
 			}
-			pr(p->p1);
-			pr(p->p2);
+			if(p->p1!=nullptr){pr(p->p1);}
+			if(p->p2!=nullptr){pr(p->p2);}
+			/* pr(p->p1);
+			pr(p->p2); */
 		}
 	};
 
-	struct sol //TODO: remove unnecesery information;
+	//TODO: remove unnecesery information;
+	struct sol 
 	{
 		subproblem s;
 		std::vector<int> from;  
@@ -154,9 +159,15 @@ public:
 		}
 		sol(subproblem sub, std::vector<int> from,std::vector<int> to,int c,std::shared_ptr<bintree> p1,std::shared_ptr<bintree> p2):
 		s(sub),from(from),to(to), b(new bintree(p1,p2,c)) {}
-	};
+	};	
 
-	
+	struct fsub
+	{
+		sol so;
+		rectangle rect; //the rectangle on the other side of the cut
+		int cut;
+		fsub(const RekSolver::sol& sol, const RekSolver::rectangle& rect, int cut): so(sol),rect(rect), cut(cut) {}
+	};
 
 	std::vector<sol> rek(const subproblem& sub);
 	std::list<int> consideredCuts(const subproblem& sub,bool vertical);
@@ -171,7 +182,9 @@ public:
 		ret[0].b->print();
 	}
 	//removes but the top k solutions
-	void selectTopK(std::vector<RekSolver::sol>& l, int k);
+	void selectTopK(std::vector<sol>& l, int k);
+	void selectTopK(std::vector<fsub> &v, int k);
 	//checks if a solution is reached
 	bool finished(const std::vector<int>& ss);
 };
+
