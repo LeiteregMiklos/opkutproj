@@ -4,6 +4,11 @@
 #include <memory>
 #include <iostream>
 
+//TODO: a subproblemekhez id
+//megoldás ábrázolás illetve log kiírni a részproblémát az idjét és az apja idjét
+//kiprobálni hibák nélkül lehetne készíteni valahogy 
+//TODO: globális változó: legfeljebb 100 függvényhívás után hogy néz ki log.
+
 struct Coord
 {
 	int x, y;
@@ -87,6 +92,7 @@ public:
 
 	struct subproblem //subproblem
 	{
+int id;
 		rectangle rect;
 		std::vector<int> ss; //stack state
 		int depth; //depth of the next cut

@@ -12,11 +12,7 @@ std::vector<RekSolver::sol> RekSolver::rek(const subproblem& sub)
 	if(finished(sub.ss)){l_ret.push_back(sol(sub,sub.ss)); return l_ret;} 
 	if (sub.begin == -1)
 	{
-sub.rect.lb.print(); sub.rect.rt.print(); std::cout<<std::endl;
-for(int x : sub.ss){std::cout<<x<<" ";} std::cout<<std::endl;
-std::cout<<sub.depth<<std::endl;
 		l_ret = fit(sub);
-std::cout<<sub.ss[0]<<"->"<<l_ret[0].to[0]<<std::endl;
 		if (sub.depth == 3)
 		{
 			return l_ret;
@@ -32,8 +28,6 @@ std::cout<<sub.ss[0]<<"->"<<l_ret[0].to[0]<<std::endl;
 		}
 		std::list<int> cc = consideredCuts(sub, vertical);
 		if(cc.size()==0){return l_ret;}
-for (int c : cc){std::cout<<c<<" ";}
-std::cout<<std::endl;
 		std::vector<fsub> v;
 		int min=10000;
 		rectangle minr;
@@ -81,22 +75,19 @@ std::cout<<std::endl;
 		selectTopK(l_ret,1);
 		trim(l_ret);
 		//if(sub.begin == 0){selectTopK(l_ret, 1);}
-		if(l_ret.size()==0){std::cout<<"nay"<<std::endl;} else {std::cout<<"yay"<<std::endl;}
-			if(l_ret.size()==0)
-			{
-				sol s_ret(sub,sub.ss);
-				l_ret.push_back(s_ret);
-			}
-		std::cout<<"to"<<l_ret[0].to[0]<<std::endl;
+		if(l_ret.size()==0)
+		{
+			sol s_ret(sub,sub.ss);
+			l_ret.push_back(s_ret);
+		}
 	}
 	if (sub.begin >= 0) //here we aim for only one solution
 	{
 		rectangle rect_(Coord(0,0),area,this->bins[sub.begin].defects);
 		subproblem sub1(rect_,sub.ss,0,-1);
 		std::vector<sol> l1=rek(sub1);
-std::cout<<l1.size()<<"!"<<std::endl;
 		selectTopK(l1,1);
-//
+
 		for(sol s1 : l1) //we assume this is only executed once
 		{
 			if(finished(s1.to)){
@@ -242,8 +233,6 @@ std::pair<RekSolver::rectangle, RekSolver::rectangle> RekSolver::cutUp(const sub
 	return std::make_pair(r1, r2);
 }
 
-
-
 std::list<int> sums(std::vector<int> inp, int k) //possible sums form inp
 {
 	std::list<int> ret;
@@ -332,7 +321,6 @@ std::list<int> RekSolver::consideredCuts(const subproblem& sub, bool vertical) /
 			}
 		} */
 	}
-	
 	for(int i=0;i<(int)lens.size();i++)
 	{
 		if(lens[i]<k){sums_.push_back(lens[i]);}
@@ -417,7 +405,6 @@ void RekSolver::selectTopK(std::vector<fsub> &v, int k) //returns the best k sol
 
 bool RekSolver::finished(const std::vector<int>& ss)
 {
-//std::cout<<"ss"<<ss.size()<<"stacks"<<stacks.size()<<std::endl;
 	for(int s=0;s<(int)stacks.size();s++)
 	{
 		if((int)stacks[s].size()>ss[s]){return false;}
@@ -447,6 +434,5 @@ std::vector<RekSolver::sol> RekSolver::fit(const subproblem& sub)
 		}
 	}
 	if(ret.size()==0){ret.push_back(sol(sub,sub.ss));}
-std::cout<<sub.ss[0]<<"->"<<ret[0].to[0]<<std::endl;
 	return ret;
 }
