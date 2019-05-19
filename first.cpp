@@ -2,14 +2,26 @@
 #include "solver.h"
 #include <algorithm>
 #include <list>
+#include <set>
 
 template<class T> //T=RekSolver::sol or fsub
 void trim(std::vector<T>& v);
 
 std::vector<RekSolver::sol> RekSolver::rek(const subproblem& sub)
 {
+	static int iterations=0;
+	iterations++;
 	std::vector<sol> l_ret;
-	if(finished(sub.ss)){l_ret.push_back(sol(sub,sub.ss)); return l_ret;} 
+
+	/* std::cout<<iterations<<std::endl;
+	if(iterations>2000){l_ret.push_back(sol(sub,sub.ss)); return l_ret;}
+	sub.print(); */
+
+	if(finished(sub.ss)){
+		l_ret.push_back(sol(sub,sub.ss)); 
+		if(sub.depth==0){l_ret[0].solval=sub.rect.lb.x;}
+		return l_ret;
+	} 
 	if (sub.begin == -1)
 	{
 		l_ret = fit(sub);
@@ -26,7 +38,7 @@ std::vector<RekSolver::sol> RekSolver::rek(const subproblem& sub)
 		{
 			vertical = false;
 		}
-		std::list<int> cc = consideredCuts(sub, vertical);
+		std::vector<int> cc = consideredCuts(sub, vertical);
 		if(cc.size()==0){return l_ret;}
 		std::vector<fsub> v;
 		int min=10000;
@@ -38,7 +50,7 @@ std::vector<RekSolver::sol> RekSolver::rek(const subproblem& sub)
 			if(c<min){min=c; minr=r1r2.second;} 
 			if (success)
 			{
-				subproblem sub1(r1r2.first,sub.ss,sub.depth + 1,-1);
+				subproblem sub1(r1r2.first,sub.ss,sub.depth + 1,-1,sub.id);
 				std::vector<sol> l1 = rek(sub1);
 
 				for (sol s1 : l1)
@@ -57,18 +69,20 @@ std::vector<RekSolver::sol> RekSolver::rek(const subproblem& sub)
 		}
 		for(fsub s1 : v)
 		{
-			subproblem sub2(s1.rect,s1.so.to,sub.depth + 1,-1);
+			subproblem sub2(s1.rect,s1.so.to,sub.depth + 1,-1,sub.id);
 			std::vector<sol> l2 = rek(sub2);
 			for(sol s2 : l2)
 			{
 				sol s_ret(sub,sub.ss,s2.to,s1.cut,s1.so.b,s2.b);
+				if(sub.depth==0){s_ret.solval=-1;} //depth 0 always corresponds to (..,0)-(6000,3210) 
 				l_ret.push_back(s_ret);
 			}
-			sub2.depth = sub.depth; //the/top right side of a cut can be followed by a cut at the same level
-			l2 = rek(sub2);
+			subproblem sub3(s1.rect,s1.so.to,sub.depth,-1,sub.id);//the/top right side of a cut can be followed by a cut at the same level
+			l2 = rek(sub3);
 			for (sol s2 : l2)
 			{
 				sol s_ret(sub,sub.ss,s2.to,s1.cut,s1.so.b,s2.b);
+				if(sub.depth==0){s_ret.solval=s2.solval;} //depth 0 always corresponds to (..,0)-(6000,3210) solval is
 				l_ret.push_back(s_ret);
 			}
 		}
@@ -84,18 +98,18 @@ std::vector<RekSolver::sol> RekSolver::rek(const subproblem& sub)
 	if (sub.begin >= 0) //here we aim for only one solution
 	{
 		rectangle rect_(Coord(0,0),area,this->bins[sub.begin].defects);
-		subproblem sub1(rect_,sub.ss,0,-1);
+		subproblem sub1(rect_,sub.ss,0,-1,sub.id);
 		std::vector<sol> l1=rek(sub1);
 		selectTopK(l1,1);
 
-		for(sol s1 : l1) //we assume this is only executed once
+		for(sol s1 : l1) //this should execute once
 		{
 			if(finished(s1.to)){
-				sol s_ret(sub,sub.ss,l1[0].to,-2,l1[0].b,nullptr);
+				sol s_ret(sub,sub.ss,s1.to,-2,s1.b,nullptr);
 				l_ret.push_back(s_ret);
 				return l_ret;
 			}
-			subproblem sub2(s1.to,sub.begin+1);
+			subproblem sub2(s1.to,sub.begin+1,sub.id);
 			std::vector<sol> l2 = rek(sub2);
 			for(sol s2 : l2)
 			{
@@ -281,52 +295,69 @@ std::vector<int> topsidesofdefs(RekSolver::rectangle r)
 //subproblem.depth alapján tudjuk hogy függőleges vagy vizszintes vágás jön. --- depth%2
 
 //TODO: átgondolni, hogy egy adott téglalap, adott stackstate adott mélység esetében milyen vágásoknak van egyáltalán értelme
-std::list<int> RekSolver::consideredCuts(const subproblem& sub, bool vertical) //returns the list of cuts
+//valuse are calculate relative to rightside/bottom side but returned as absolut positions
+std::vector<int> RekSolver::consideredCuts(const subproblem& sub, bool vertical) //returns the list of cuts
 {
 	int nn = 1; //number of objects considered on in stack
-	std::vector<int> lens;
+	std::set<int> lens; //to avoid duplicates
 	for(int j=0;j<(int)this->stacks.size();j++)
 	{
-		for (int i = sub.ss[j]; i < sub.ss[j]+nn; i++)
+		for (int i = sub.ss[j]; i < sub.ss[j]+nn && i<(int)stacks[j].size(); i++)
 		{
-			lens.push_back(stacks[j][i].size.x);
-			lens.push_back(stacks[j][i].size.y);
+//std::cout<<j<<" "<<sub.ss[j]<<" "<<i<<" "<<stacks[j][i].id<<" "<<stacks[j][i].size.x<<" "<<stacks[j][i].size.y;
+			if(stacks[j][i].size.x<sub.rect.rt.x - sub.rect.lb.x && stacks[j][i].size.y<=sub.rect.rt.y - sub.rect.lb.y && vertical)
+			{
+				lens.insert(stacks[j][i].size.x);
+			}
+			if(stacks[j][i].size.y<sub.rect.rt.x - sub.rect.lb.x && stacks[j][i].size.x<=sub.rect.rt.y - sub.rect.lb.y && vertical)
+			{
+				lens.insert(stacks[j][i].size.y);
+			}
+			if(stacks[j][i].size.y<sub.rect.rt.y - sub.rect.lb.y && stacks[j][i].size.x<=sub.rect.rt.x - sub.rect.lb.x && !vertical)
+			{
+				lens.insert(stacks[j][i].size.y);
+			}
+			if(stacks[j][i].size.x<sub.rect.rt.y - sub.rect.lb.y && stacks[j][i].size.y<=sub.rect.rt.x - sub.rect.lb.x && !vertical)
+			{
+				lens.insert(stacks[j][i].size.x);
+			}
+			/* lens.push_back(stacks[j][i].size.x);
+			lens.push_back(stacks[j][i].size.y); */
+		}
+//std::cout<<std::endl;
+	}
+	int base;
+	if(vertical){base=sub.rect.lb.x;} else {base=sub.rect.lb.y;}
+	if(lens.size()!=0)
+	{
+//std::cout<<"!";
+		//int k;
+		if (vertical)
+		{
+			//k = sub.rect.rt.x - sub.rect.lb.x;
+			for(int x : rightsidesofdefs(sub.rect))
+			{
+				if(x<sub.rect.rt.x-100)
+				{
+					lens.insert(x-base);
+				}
+			}
+		}
+		else
+		{
+			//k = sub.rect.rt.y - sub.rect.lb.y;
+			for(int x : topsidesofdefs(sub.rect))
+			{
+				if(x<sub.rect.rt.y-100)
+				{
+					lens.insert(x-base);
+				}
+			}
 		}
 	}
-	int k;
-	int base;
-	//std::list<int> sums_=sums(lens, k);
-	std::list<int> sums_;
-	if (vertical)
-	{
-		base=sub.rect.lb.x;
-		k = sub.rect.rt.x - sub.rect.lb.x;
-		/* for(int x : rightsidesofdefs(sub.rect))
-		{
-			if(x<sub.rect.rt.x-100)
-			{
-				sums_.push_back(x);
-			}
-		} */
-	}
-	else
-	{
-		base=sub.rect.lb.y;
-		k = sub.rect.rt.y - sub.rect.lb.y;
-		/* for(int x : topsidesofdefs(sub.rect))
-		{
-			if(x<sub.rect.rt.y-100)
-			{
-				sums_.push_back(x);
-			}
-		} */
-	}
-	for(int i=0;i<(int)lens.size();i++)
-	{
-		if(lens[i]<k){sums_.push_back(lens[i]);}
-	}
-	for(auto it=sums_.begin();it!=sums_.end();it++){*it+=base;}
-	return sums_;
+	std::vector<int> ret;
+	for(auto it=lens.begin();it!=lens.end();it++){ret.push_back(*it+base);}
+	return ret;
 }
 
 class comparator
@@ -339,6 +370,12 @@ public:
 	}
 	bool operator()(RekSolver::sol& lhs, RekSolver::sol& rhs)
 	{
+		if(lhs.s.depth==0 && rhs.s.depth==0)
+		{
+			if(lhs.solval!=-1 && rhs.solval!=-1){return lhs.solval<rhs.solval;}
+			if(lhs.solval==-1 && rhs.solval!=-1){return false;}
+			if(lhs.solval!=-1 && rhs.solval==-1){return true;}
+		}
 		int ar1=0;
 		int ar2=0;
 		for(int s=0;s<(int)stacks->size();s++)

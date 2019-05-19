@@ -81,6 +81,7 @@ public:
 class RekSolver : public Solver
 {
 public:
+
 	struct rectangle
 	{
 		Coord lb; //left bottom
@@ -92,14 +93,40 @@ public:
 
 	struct subproblem //subproblem
 	{
-int id;
+		int id;
+		int parent;
+		int nextid()
+		{
+			static int c=0;
+			return ++c;
+		}
 		rectangle rect;
 		std::vector<int> ss; //stack state
 		int depth; //depth of the next cut
 		int begin; //-1 if the subproblem is a rectangle; begin=k means the subproblem corresponds to all the bins from the k-th one on
 		subproblem(const subproblem& sub) = default;
-		subproblem(const std::vector<int>& ss, int begin): ss(ss), begin(begin) {}
-		subproblem(const rectangle& rect,const std::vector<int>& ss, int depth, int begin): rect(rect), ss(ss), depth(depth), begin(begin) {}
+		subproblem(const std::vector<int>& ss, int begin, int parent): parent(parent), ss(ss), begin(begin)
+		{
+			id=nextid();
+		}
+		subproblem(const rectangle& rect,const std::vector<int>& ss, int depth, int begin, int parent): 
+		 parent(parent), rect(rect), ss(ss), depth(depth), begin(begin) 
+		{
+			id=nextid();
+		}
+
+		void print() const
+		{
+			std::cout<<"id:"<<id<<"parent:"<<parent<<std::endl;
+			if(begin>=0){std::cout<<"bin:"<<begin<<std::endl;}
+			else{
+				std::cout<<"rect:"; rect.lb.print(); rect.rt.print(); (rect.rt-rect.lb).print(); std::cout<<std::endl;
+				std::cout<<"depth"<<depth<<std::endl; 
+			}
+			std::cout<<"ss"; 
+			for(int i=0;i<(int)ss.size();i++){std::cout<<ss[i]<<" ";}
+			std::cout<<std::endl;
+		}
 	};
 	
 	struct bintree //for storing the cutting pattern
@@ -108,8 +135,10 @@ int id;
 		std::shared_ptr<bintree> p2; //sides of the cut
 		int cut; //-1 -- no cut -- -2 p1 and p2 are different bins
 		int itemid; //-1 -- no item
+		int depth;
 		bintree():p1(nullptr), p2(nullptr),cut(-1),itemid(-1) {}
-		bintree(std::shared_ptr<bintree> p1,std::shared_ptr<bintree> p2,int c): p1(p1), p2(p2), cut(c), itemid(-1) {}
+		bintree(std::shared_ptr<bintree> p1,std::shared_ptr<bintree> p2,int c, int depth):
+		 p1(p1), p2(p2), cut(c), itemid(-1), depth(depth) {}
 
 		void print()
 		{
@@ -134,20 +163,15 @@ int id;
 			{
 				if(p->cut!=-1)
 				{
+					std::cout<<p->depth;
 					std::cout<<"cut "<<p->cut<<std::endl;
 				} else 
 				{
 					std::cout<<"itemid: "<<p->itemid<<std::endl;
 				}
-				/* if(p->itemid!=-1)
-				{
-					
-				} */
+				if(p->p1!=nullptr){pr(p->p1);}
+				if(p->p2!=nullptr){pr(p->p2);}
 			}
-			if(p->p1!=nullptr){pr(p->p1);}
-			if(p->p2!=nullptr){pr(p->p2);}
-			/* pr(p->p1);
-			pr(p->p2); */
 		}
 	};
 
@@ -155,6 +179,7 @@ int id;
 	struct sol 
 	{
 		subproblem s;
+		int solval;
 		std::vector<int> from;  
 		std::vector<int> to; //[ , )
 		std::shared_ptr<bintree> b;
@@ -162,9 +187,13 @@ int id;
 		{
 			this->from=v;
 			this->to=v;
+			solval=-1;
 		}
 		sol(subproblem sub, std::vector<int> from,std::vector<int> to,int c,std::shared_ptr<bintree> p1,std::shared_ptr<bintree> p2):
-		s(sub),from(from),to(to), b(new bintree(p1,p2,c)) {}
+		s(sub),from(from),to(to), b(new bintree(p1,p2,c,sub.depth)) 
+		{
+			solval=-1;
+		}
 	};	
 
 	struct fsub
@@ -176,7 +205,7 @@ int id;
 	};
 
 	std::vector<sol> rek(const subproblem& sub);
-	std::list<int> consideredCuts(const subproblem& sub,bool vertical);
+	std::vector<int> consideredCuts(const subproblem& sub,bool vertical);
 	//cuts up the ractangle into two
 	std::pair<rectangle, rectangle> cutUp(const subproblem& sub, int cut, bool vertical, bool& success);
 	std::vector<sol> fit(const subproblem& sub); //solves the special case where no more cuts are allowed 
@@ -184,7 +213,7 @@ int id;
 	void solve()
 	{
 		std::vector<int> ss(stacks.size(),0);
-		std::vector<sol> ret=rek(subproblem(ss,0));
+		std::vector<sol> ret=rek(subproblem(ss,0,0));
 		ret[0].b->print();
 	}
 	//removes but the top k solutions
