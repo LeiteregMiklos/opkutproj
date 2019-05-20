@@ -17,3 +17,9 @@ pénteki beszámoló óta javítás:
 egy csomó kis hiba kijavítása, 
 nem vágunk olyan téglalapokon amik már úgyis túl kicsik és nem fér bele semmi->odaraktam a consideredCuts-ba a régi verziót, azt is ki lehet próbálni
 hibáknál is vágunk, azaz megpróbáljuk levágni a hibákat
+van minden subproblemnek id je és lehet követni hogy melyik melyikből jött létre, és ki lehet iratni ha kell
+
+output értelmezése:
+rekurzívan: egy téglalap leírása: ha van vágva a téglalap akkor amélység és a vágás koordinátája,
+majd egyik oldal leírása és másik oldal leírása
+ha nincs vágva a téglalap akkor -1 ha nincs benne item és itemid ha van
