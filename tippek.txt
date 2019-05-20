@@ -1,0 +1,19 @@
+fordítani: 
+egyszer: chmod +x comp.sh (ezzel futtathatóvá teszed a comp.sh-t)
+utána ./comp.sh fordít
+
+kísérletezni:
+selectTopK nál kipróbálni 1 től nagyobb számokat(vigyazz nem fog lefutni ctrl+C vel meg tudod szakítani a futást)
+defectek nélkül futatni->nodefects
+kevesebb tárgy->firstKitems
+
+mérni: 
+futásidőt (time ./glass   lefuttatja és megméri az időt)
+iterations: ez méri hányszor hívtad meg a rek-et
+solval: elvileg az utolsó bin megoldásában ez az érték azt méri hogy az utolsó 0 szintű vágás mennyire van jobbra
+azaz elvileg azon belül hogy hány bin-t használunk ezt kell optimalizálni, és elvileg erre is optimalizálunk
+
+pénteki beszámoló óta javítás: 
+egy csomó kis hiba kijavítása, 
+nem vágunk olyan téglalapokon amik már úgyis túl kicsik és nem fér bele semmi->odaraktam a consideredCuts-ba a régi verziót, azt is ki lehet próbálni
+hibáknál is vágunk, azaz megpróbáljuk levágni a hibákat

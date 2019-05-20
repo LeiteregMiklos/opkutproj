@@ -9,7 +9,7 @@ void trim(std::vector<T>& v);
 
 std::vector<RekSolver::sol> RekSolver::rek(const subproblem& sub)
 {
-	static int iterations=0;
+	static int iterations=0; //ez méri hányszor hívtad meg a rek-et
 	iterations++;
 	std::vector<sol> l_ret;
 
@@ -82,13 +82,12 @@ std::vector<RekSolver::sol> RekSolver::rek(const subproblem& sub)
 			for (sol s2 : l2)
 			{
 				sol s_ret(sub,sub.ss,s2.to,s1.cut,s1.so.b,s2.b);
-				if(sub.depth==0){s_ret.solval=s2.solval;} //depth 0 always corresponds to (..,0)-(6000,3210) solval is
+				if(sub.depth==0){s_ret.solval=s2.solval;} //depth 0 always corresponds to (..,0)-(6000,3210) "solval is the rightmost cut"
 				l_ret.push_back(s_ret);
 			}
 		}
 		selectTopK(l_ret,1);
 		trim(l_ret);
-		//if(sub.begin == 0){selectTopK(l_ret, 1);}
 		if(l_ret.size()==0)
 		{
 			sol s_ret(sub,sub.ss);
@@ -110,14 +109,14 @@ std::vector<RekSolver::sol> RekSolver::rek(const subproblem& sub)
 				return l_ret;
 			}
 			subproblem sub2(s1.to,sub.begin+1,sub.id);
-			std::vector<sol> l2 = rek(sub2);
+			std::vector<sol> l2 = rek(sub2); //Ez is elvileg 1 hosszú
 			for(sol s2 : l2)
 			{
 				sol s_ret(sub,sub.ss,s2.to,-2,s1.b,s2.b);
 				l_ret.push_back(s_ret);
 			}
 		}
-		//selectTopK(l_ret,1);
+		//selectTopK(l_ret,1); //elvileg ez nem kell
 	}
 	return l_ret;
 }
@@ -322,6 +321,15 @@ std::vector<int> RekSolver::consideredCuts(const subproblem& sub, bool vertical)
 			}
 		}
 	}
+	//itt kipróbálhatod ezt a régi verziót, ez akkor is vág ha már nem férne bele úgyse
+	/* for(int j=0;j<(int)this->stacks.size();j++)
+	{
+		for (int i = sub.ss[j]; i < sub.ss[j]+nn && i<(int)stacks[j].size() ; i++)
+		{
+			lens.insert(stacks[j][i].size.x);
+			lens.insert(stacks[j][i].size.y);
+		}
+	} */
 	int base;
 	if(vertical){base=sub.rect.lb.x;} else {base=sub.rect.lb.y;}
 	if(lens.size()!=0)
