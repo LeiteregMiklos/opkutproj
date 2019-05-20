@@ -100,7 +100,7 @@ std::vector<RekSolver::sol> RekSolver::rek(const subproblem& sub)
 		rectangle rect_(Coord(0,0),area,this->bins[sub.begin].defects);
 		subproblem sub1(rect_,sub.ss,0,-1,sub.id);
 		std::vector<sol> l1=rek(sub1);
-		selectTopK(l1,1);
+		selectTopK(l1,1); //ezt szerintem tartsd meg 1 nek
 
 		for(sol s1 : l1) //this should execute once
 		{
@@ -299,12 +299,11 @@ std::vector<int> topsidesofdefs(RekSolver::rectangle r)
 std::vector<int> RekSolver::consideredCuts(const subproblem& sub, bool vertical) //returns the list of cuts
 {
 	int nn = 1; //number of objects considered on in stack
-	std::set<int> lens; //to avoid duplicates
+	std::set<int> lens; //"set" -> to avoid duplicates
 	for(int j=0;j<(int)this->stacks.size();j++)
 	{
 		for (int i = sub.ss[j]; i < sub.ss[j]+nn && i<(int)stacks[j].size(); i++)
 		{
-//std::cout<<j<<" "<<sub.ss[j]<<" "<<i<<" "<<stacks[j][i].id<<" "<<stacks[j][i].size.x<<" "<<stacks[j][i].size.y;
 			if(stacks[j][i].size.x<sub.rect.rt.x - sub.rect.lb.x && stacks[j][i].size.y<=sub.rect.rt.y - sub.rect.lb.y && vertical)
 			{
 				lens.insert(stacks[j][i].size.x);
@@ -321,16 +320,12 @@ std::vector<int> RekSolver::consideredCuts(const subproblem& sub, bool vertical)
 			{
 				lens.insert(stacks[j][i].size.x);
 			}
-			/* lens.push_back(stacks[j][i].size.x);
-			lens.push_back(stacks[j][i].size.y); */
 		}
-//std::cout<<std::endl;
 	}
 	int base;
 	if(vertical){base=sub.rect.lb.x;} else {base=sub.rect.lb.y;}
 	if(lens.size()!=0)
 	{
-//std::cout<<"!";
 		//int k;
 		if (vertical)
 		{

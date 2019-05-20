@@ -212,6 +212,8 @@ public:
 	//i.e. checking if sub.rect matches any upcomming rectangles
 	void solve()
 	{
+		//firstKitems(30);
+		//nodefects();
 		std::vector<int> ss(stacks.size(),0);
 		std::vector<sol> ret=rek(subproblem(ss,0,0));
 		ret[0].b->print();
@@ -221,5 +223,31 @@ public:
 	void selectTopK(std::vector<fsub> &v, int k);
 	//checks if a solution is reached
 	bool finished(const std::vector<int>& ss);
+
+	void firstKitems(int k)
+	{
+		int c=0;
+		for(int i=0;i<(int)stacks.size();i++)
+		{
+			int cc=0;
+			for(int j=0;j<(int)stacks[i].size() && c<k;j++)
+			{
+				c++;
+				cc++;
+			}
+			stacks[i].resize(cc);
+			if(stacks[i].size()==0){
+				stacks.resize(i);
+			}
+		}
+	}
+
+	void nodefects()
+	{
+		for(int i=0;i<(int)bins.size();i++)
+		{
+			bins[i].defects.resize(0);
+		}
+	}
 };
 
